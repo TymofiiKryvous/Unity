@@ -1,26 +1,49 @@
 using UnityEngine;
+using UnityEngine.UI;
+using System;
+using System.Collections.Generic;
 
-public class GameView : MonoBehaviour
+public class PlayerView : MonoBehaviour
 {
-    [SerializeField] public GameObject enemyPrefab;
-    [SerializeField] public float spawnRadius = 10f;
-    [SerializeField] public GameObject player;
-    [SerializeField] public GameObject hitboxCircle;
+    [SerializeField] private Text xpText;
+    [SerializeField] private Text levelText;
+    [SerializeField] private GameObject upgradePanel;
+    [SerializeField] private Button[] upgradeButtons;
 
-    public void DisplayPlayerHitbox()
+    public void UpdatePlayerStats(int currentXP, int xpForNextLevel, int level)
     {
-        hitboxCircle.SetActive(true);
-        hitboxCircle.transform.position = player.transform.position;
+        xpText.text = $"XP: {currentXP}/{xpForNextLevel}";
+        levelText.text = $"Level: {level}";
     }
 
-    public void SpawnEnemyVisual(GameObject enemy, Vector3 position)
+    public void ShowXPDrop(Vector3 position)
     {
-        enemy.transform.position = position;
-        enemy.SetActive(true);
+        var xpSphere = Instantiate(Resources.Load<GameObject>("Prefabs/XPSphere"), position, Quaternion.identity);
+        Destroy(xpSphere, 5f); // XP-сфера зникає через 5 секунд
     }
 
-    public void RemoveEnemyVisual(GameObject enemy)
+    public void ShowUpgradePanel(List<ISpell> spells, Action<ISpell, ISpell> onUpgradeSelected)
     {
-        Destroy(enemy);
+        upgradePanel.SetActive(true);
+
+        // Показуємо три варіанти апгрейдів
+        for (int i = 0; i < upgradeButtons.Length; i++)
+        {
+            var button = upgradeButtons[i];
+            ISpell newSpell = null;
+            ISpell upgradedSpell = null;
+
+            if (i < spells.Count) upgradedSpell = spells[i]; // Покращення існуючих
+            else newSpell = i == spells.Count ? new FreezeBolt() : new RampageSpell(); // Нові навички
+
+            button.onClick.RemoveAllListeners();
+            button.onClick.AddListener(() => onUpgradeSelected(newSpell, upgradedSpell));
+            button.GetComponentInChildren<Text>().text = newSpell?.Name ?? $"Upgrade {upgradedSpell.Name}";
+        }
+    }
+
+    public void HideUpgradePanel()
+    {
+        upgradePanel.SetActive(false);
     }
 }

@@ -4,33 +4,47 @@ using VContainer.Unity;
 
 public class GameInstaller : LifetimeScope
 {
-    [SerializeField] private GameView gameView;
+    [SerializeField] private GameObject playerPrefab;
+    [SerializeField] private GameObject enemyPrefab;
 
     protected override void Configure(IContainerBuilder builder)
     {
+        // Реєстрація фабрики
+        builder.Register<GameFactory>(Lifetime.Singleton)
+            .WithParameter("playerPrefab", playerPrefab)
+            .WithParameter("enemyPrefab", enemyPrefab);
+
+        // Реєстрація моделі, в'ю і презентера
         builder.Register<GameModel>(Lifetime.Singleton);
-        builder.RegisterComponent(gameView);
-        builder.Register<IObjectFactory, ObjectFactory>(Lifetime.Singleton);
-        builder.Register<GamePresenter>(Lifetime.Singleton)
-               .AsImplementedInterfaces();
+        builder.RegisterComponentInHierarchy<PlayerView>();
+        builder.Register<GamePresenter>(Lifetime.Singleton);
     }
 }
 
-public interface IObjectFactory
+public class GameFactory
 {
-    GameObject Instantiate(GameObject prefab, Vector3 position, Quaternion rotation);
-    void Destroy(GameObject obj);
-}
+    private readonly GameObject playerPrefab;
+    private readonly GameObject enemyPrefab;
 
-public class ObjectFactory : IObjectFactory
-{
-    public GameObject Instantiate(GameObject prefab, Vector3 position, Quaternion rotation)
+    public GameFactory(GameObject playerPrefab, GameObject enemyPrefab)
     {
-        return Object.Instantiate(prefab, position, rotation);
+        this.playerPrefab = playerPrefab;
+        this.enemyPrefab = enemyPrefab;
     }
 
-    public void Destroy(GameObject obj)
+    public GameObject CreatePlayer(Vector3 position)
     {
-        Object.Destroy(obj);
+        return Object.Instantiate(playerPrefab, position, Quaternion.identity);
+    }
+
+    public Enemy CreateEnemy(Vector3 position)
+    {
+        var enemyObject = Object.Instantiate(enemyPrefab, position, Quaternion.identity);
+        return enemyObject.GetComponent<Enemy>();
+    }
+
+    public ISpell CreateFreezeBolt()
+    {
+        return new FreezeBolt();
     }
 }
