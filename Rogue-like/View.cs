@@ -1,49 +1,36 @@
-using UnityEngine;
-using UnityEngine.UI;
-using System;
 using System.Collections.Generic;
+using UnityEngine;
 
-public class PlayerView : MonoBehaviour
+public class GameView : MonoBehaviour
 {
-    [SerializeField] private Text xpText;
-    [SerializeField] private Text levelText;
-    [SerializeField] private GameObject upgradePanel;
-    [SerializeField] private Button[] upgradeButtons;
+    [SerializeField] private GameObject playerObject;
+    [SerializeField] private GameObject enemyPrefab;
+    private readonly Dictionary<EnemyModel, GameObject> enemyObjects = new();
 
-    public void UpdatePlayerStats(int currentXP, int xpForNextLevel, int level)
+    public void UpdatePlayerPosition(Vector3 position)
     {
-        xpText.text = $"XP: {currentXP}/{xpForNextLevel}";
-        levelText.text = $"Level: {level}";
+        playerObject.transform.position = position;
     }
 
-    public void ShowXPDrop(Vector3 position)
+    public void UpdateEnemyPositions(List<EnemyModel> enemies)
     {
-        var xpSphere = Instantiate(Resources.Load<GameObject>("Prefabs/XPSphere"), position, Quaternion.identity);
-        Destroy(xpSphere, 5f); // XP-сфера зникає через 5 секунд
-    }
-
-    public void ShowUpgradePanel(List<ISpell> spells, Action<ISpell, ISpell> onUpgradeSelected)
-    {
-        upgradePanel.SetActive(true);
-
-        // Показуємо три варіанти апгрейдів
-        for (int i = 0; i < upgradeButtons.Length; i++)
+        foreach (var enemy in enemies)
         {
-            var button = upgradeButtons[i];
-            ISpell newSpell = null;
-            ISpell upgradedSpell = null;
+            if (!enemyObjects.ContainsKey(enemy))
+            {
+                var enemyObject = Instantiate(enemyPrefab, enemy.Position, Quaternion.identity);
+                enemyObjects[enemy] = enemyObject;
+            }
 
-            if (i < spells.Count) upgradedSpell = spells[i]; // Покращення існуючих
-            else newSpell = i == spells.Count ? new FreezeBolt() : new RampageSpell(); // Нові навички
-
-            button.onClick.RemoveAllListeners();
-            button.onClick.AddListener(() => onUpgradeSelected(newSpell, upgradedSpell));
-            button.GetComponentInChildren<Text>().text = newSpell?.Name ?? $"Upgrade {upgradedSpell.Name}";
+            if (enemy.Health <= 0)
+            {
+                Destroy(enemyObjects[enemy]);
+                enemyObjects.Remove(enemy);
+            }
+            else
+            {
+                enemyObjects[enemy].transform.position = enemy.Position;
+            }
         }
-    }
-
-    public void HideUpgradePanel()
-    {
-        upgradePanel.SetActive(false);
     }
 }
